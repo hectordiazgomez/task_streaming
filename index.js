@@ -48,7 +48,8 @@ const getPDFs = async (name) => {
         const vectorStore = await FaissStore.fromDocuments(splitDocs, embeddings);
 
         const llm = new ChatOpenAI({
-            //Your chat openai credentials go here
+          //Your chat openai credentials go here
+          streaming: true,
         });
         const memory = new BufferMemory({ memoryKey: "chat_history", returnMessages: true });
 
@@ -72,8 +73,21 @@ async function askQuestion() {
     }
     try {
         const conversation = await getPDFs(name);
-        const answer = await conversation?.call({ question });
-        console.log({ answer: answer?.text });
+        let answer = "";
+        await conversation?.invoke(
+          { question },
+          {
+            callbacks: [
+              {
+                handleLLMNewToken(token) {
+                  console.log(token);
+                  answer += token;
+                },
+              },
+            ],
+          }
+        );
+        console.log({ answer });
     } catch (error) {
         console.error(error);
     }
